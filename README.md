@@ -76,7 +76,7 @@ To block specific traders, add wallet addresses to a text file:
 
 
 ## 💬 Support  
-**Telegram** | [@Sabonis](https://t.me/sabonis_24) 
+**Telegram** | [@Sabonis](https://t.me/sabnova24) 
 
 
 ---
