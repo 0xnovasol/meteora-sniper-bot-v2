@@ -1,6 +1,8 @@
 use chrono::Local;
 
-const LOG_LEVEL: &str = "LOG";
+fn log_level() -> String {
+    std::env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string())
+}
 
 pub struct Logger {
     prefix: String,
@@ -47,13 +49,12 @@ impl Logger {
     }
 }
 
-struct LogLevel<'a> {
-    level: &'a str,
+struct LogLevel {
+    level: String,
 }
-impl LogLevel<'_> {
+impl LogLevel {
     fn new() -> Self {
-        let level = LOG_LEVEL;
-        LogLevel { level }
+        LogLevel { level: log_level() }
     }
     fn is_debug(&self) -> bool {
         self.level.to_lowercase().eq("debug")

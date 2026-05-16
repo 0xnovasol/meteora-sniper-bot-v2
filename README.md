@@ -1,83 +1,78 @@
-# Solana Token Sniper – Raydium & Pump.fun  
+# Meteora DLMM Sniper Bot
 
-## 📌 Overview  
+A Rust bot that monitors the Solana blockchain for newly created [Meteora DLMM](https://docs.meteora.ag/) liquidity pools and immediately executes a buy swap into them.
 
-A high-speed Solana sniper bot built in Rust, optimized for same-block execution on Raydium and Pump.fun, with secure memory handling and multi-gRPC support via Helius & Yellowstone.
+## How it works
 
----
+1. **Monitor** – subscribes to the Meteora DLMM program (`LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo`) via a Solana WebSocket `logsSubscribe` connection.
+2. **Detect** – filters for `InitializeLbPair` log messages, which are emitted when a new pool is created.
+3. **Validate** – fetches the `LbPair` account and checks that one of the mints is native SOL (only SOL-paired pools are sniped).
+4. **Swap** – constructs a Meteora DLMM `swap` instruction and submits it via **Jito bundles** (default) or standard RPC.
 
-## ⚡ Key Features  
+## Setup
 
-| Feature | Description |
-|---------|------------|
-| 🚀 **Speed & Efficiency** | Executes **low-latency** token snipes almost instantly. |
-| 🔒 **Security & Stability** | Built with **Rust** for performance and reliability. |
-| 📡 **Real-Time Monitoring** | Connects to **Helius & Yellowstone** for real-time updates. |
-| 🛠 **Advanced Trading** | Supports **Jito-confirm** and **Jito-bundle** for optimized transactions. |
-| 🤖 **Automated Strategy Execution** | Smart triggers for entry and exit based on real-time market conditions. |
-| 📈 **Customizable Trading Parameters** | Users can set **buy/sell thresholds, slippage, and max gas fees**. |
-| 🔄 **Auto-Sell & Stop-Loss** | Protect profits and minimize losses with configurable stop-loss settings. |
-| 👩‍💻 **User-Friendly Interface** | Configurable **.env settings** and **intuitive CLI for easy navigation**. |
-| 🔍 **Live Transaction Tracking** | Monitor trades in real-time with a detailed execution log. |
-| 🏦 **Multi-Wallet Support** | Trade across multiple wallets for diversification and risk management. |
-| 🛒 **Pre-Set Token Whitelist/Blacklist** | Avoid rug pulls and target only trusted tokens. |
-| 🎯 **Smart AI Prediction (Future Feature)** | Integrate AI models to identify high-potential sniping targets. |
+### Prerequisites
 
+- Rust 1.75+ (`rustup update stable`)
+- A Solana wallet with SOL for trades and transaction fees
+- A premium WebSocket RPC endpoint (Helius, QuickNode, etc.) for low-latency detection
 
----
+### Install
 
-
-## 🎯 Trading Strategy  
-
-The bot automatically buys when a user purchases $1,000+ of a token, sells when $300+ is sold, closes positions after 60 seconds, includes stop-loss protection, and dynamically adjusts strategy based on market trends, with all parameters configurable in .env.
-
----
-
-## 📌 Setup & Configuration
-
-### 1️⃣ Set Environment Variables
-Create a `.env` file in the root directory and add the following settings:
-
-```plaintext
-PRIVATE_KEY=your_private_key
-RPC_HTTPS=https://mainnet.helius-rpc.com/?api-key=your_api_key
-SLIPPAGE=10
-BUY_THRESHOLD=1000
-SELL_THRESHOLD=300
-TIME_EXCEED=60
+```bash
+git clone <repo>
+cd meteora-sniper-bot
+cp .env.example .env
+# fill in your .env values
+cargo build --release
 ```
 
-### 2️⃣ Run the Bot
-Execute the following command to start the bot:
+### Run
 
-```sh
+```bash
 cargo run --release
 ```
 
-### 3️⃣ Configure Blocklist
-To block specific traders, add wallet addresses to a text file:
+## Configuration
 
-```plaintext
-0x1234567890abcdef
-0xabcdef1234567890
+| Variable | Description | Default |
+|---|---|---|
+| `RPC_HTTPS` | HTTP RPC endpoint | – |
+| `RPC_WSS` | WebSocket RPC endpoint | – |
+| `PRIVATE_KEY` | Base-58 encoded wallet private key | – |
+| `BUY_AMOUNT` | SOL to spend per new pool | `0.1` |
+| `SLIPPAGE` | Slippage tolerance (%) | `10` |
+| `USE_JITO` | Use Jito bundle submission | `true` |
+| `JITO_BLOCK_ENGINE_URL` | Jito block engine base URL | `https://mainnet.block-engine.jito.wtf` |
+| `JITO_TIP_VALUE` | Fixed Jito tip in SOL | `0.004` |
+| `UNIT_PRICE` | Compute unit price (non-Jito) | `100000` |
+| `UNIT_LIMIT` | Compute unit limit (non-Jito) | `300000` |
+
+## Architecture
+
+```
+src/
+├── main.rs                      # Entry point
+├── common/
+│   ├── logger.rs                # Timestamped logger
+│   ├── rpc.rs                   # RPC helpers
+│   └── utils.rs                 # AppState, SwapConfig
+├── core/
+│   ├── token.rs                 # SPL token helpers
+│   └── tx.rs                    # Transaction signing & sending
+├── dex/
+│   └── meteora.rs               # Meteora DLMM swap + LbPair parsing
+├── engine/
+│   ├── swap.rs                  # SwapDirection, SwapInType types
+│   └── monitor/
+│       └── meteora.rs           # WebSocket pool detector
+└── services/
+    ├── jito.rs                  # Jito bundle service
+    └── nextblock.rs             # NextBlock stub
 ```
 
----
+## Notes
 
-
-## 📊 Test Results
-
-- ✅ **Detected:** [View Transaction](https://solscan.io/tx/5o7ajnZ9CRf7FBYEvydu8vapJJDWtKCvRFiTUBmbeu2FmmDhAQQy3c9YFFhpTucr2SZcrf2aUsDanEVjYgwN9kBc)
-- 🛒 **Bought:** [View Transaction](https://solscan.io/tx/3vgim3MwJsdtahXqfW2DrzTAWpVQ8EUTed2cjzHuqxSfUpfp72mgzZhiVosWaCUHdqJTDHpQaYh5xN7rkHGmzqWv)
-- 📈 **Trade Analysis:** [DEX Screener](https://dexscreener.com/solana/A1zZXCq2DmqwVD4fLDzmgQ3ceY6LQnMBVokejqnHpump)
-
-
----
-
-
-## 💬 Support  
-**Telegram** | [@Sabonis](https://t.me/sabnova24) 
-
-
----
-
+- **Bin array offsets** – the `LbPairState::from_account_data` parser uses hard-coded byte offsets derived from the Meteora DLMM IDL. If the program is upgraded these may need updating.
+- **DLMM swap discriminator** – `[248, 198, 158, 145, 225, 117, 135, 200]` (Anchor `sha256("global:swap")[0..8]`). Verify against the live IDL before deploying.
+- This software is provided for educational purposes. Use at your own risk.
